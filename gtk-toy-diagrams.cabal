@@ -1,0 +1,19 @@
+Name:                gtk-toy-diagrams
+Version:             0.1.0
+Cabal-Version:       >= 1.2
+Synopsis:            Utility functions for using diagrams with gtk-toy.
+Category:            Graphics, GUI
+Description: 
+License:             BSD3
+License-file:        LICENSE
+Author:              Michael Sloan
+Maintainer:          Michael Sloan <mgsloan@gmail.com>
+Stability:           experimental
+Build-Type:          Simple
+
+Library
+  Extensions:        TupleSections
+  Build-Depends:     base, containers, diagrams-lib, diagrams-cairo, gtk, gtk-toy
+  Hs-source-dirs:    src
+  Exposed-Modules:
+    Graphics.UI.Gtk.Toy.Diagrams
