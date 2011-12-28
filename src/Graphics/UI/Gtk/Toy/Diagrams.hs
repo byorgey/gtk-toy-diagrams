@@ -9,13 +9,13 @@
 -- Portability :  GHC only
 --
 
-module Graphics.UI.Gtk.Toy.Diagrams ( diagramsDisplay ) where
+module Graphics.UI.Gtk.Toy.Diagrams ( CairoDiagram, diagramsDisplay ) where
 
 import Diagrams.Prelude
 import Diagrams.Backend.Cairo
 import Diagrams.Backend.Cairo.Gtk
 import qualified Graphics.UI.Gtk as G
---import Graphics.UI.Gtk.Toy
+import Graphics.UI.Gtk.Toy
 
 type CairoDiagram = Diagram Cairo R2
 
@@ -23,8 +23,8 @@ type CairoDiagram = Diagram Cairo R2
 -- import any other Gtk modules.
 
 diagramsDisplay :: (a -> CairoDiagram)
-                -> G.DrawWindow -> a -> IO a
-diagramsDisplay f dw x = (renderToGtk dw $ f x) >> return x
+                -> G.DrawWindow -> InputState -> a -> IO a
+diagramsDisplay f dw _ x = (renderToGtk dw $ f x) >> return x
 
 {-
 -- Re-expors Graphics.UI.Gtk.Toy's functionality under the guise of a

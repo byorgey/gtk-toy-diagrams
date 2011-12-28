@@ -13,7 +13,16 @@ Build-Type:          Simple
 
 Library
   Extensions:        TupleSections
-  Build-Depends:     base, containers, diagrams-lib, diagrams-cairo, gtk, gtk-toy
+  Build-Depends:     base,
+                     containers,
+                     colour,
+                     diagrams-lib,
+                     diagrams-cairo,
+                     diagrams-contrib,
+                     fclabels,
+                     gtk,
+                     gtk-toy
   Hs-source-dirs:    src
   Exposed-Modules:
     Graphics.UI.Gtk.Toy.Diagrams
+    Graphics.UI.Gtk.Toy.Text
