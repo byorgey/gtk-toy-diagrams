@@ -1,6 +1,6 @@
 Name:                gtk-toy-diagrams
 Version:             0.1.0
-Cabal-Version:       >= 1.2
+Cabal-Version:       >= 1.8
 Synopsis:            Utility functions for using diagrams with gtk-toy.
 Category:            Graphics, GUI
 Description: 
@@ -26,3 +26,15 @@ Library
   Exposed-Modules:
     Graphics.UI.Gtk.Toy.Diagrams
     Graphics.UI.Gtk.Toy.Text
+
+executable test
+  Main-Is:           examples/Test.hs
+  Build-Depends:     base,
+                     containers,
+                     colour,
+                     diagrams-lib,
+                     diagrams-cairo,
+                     diagrams-contrib,
+                     fclabels,
+                     gtk-toy,
+                     gtk-toy-diagrams

@@ -7,6 +7,7 @@ import Diagrams.Backend.Cairo.Unsafe (StyleParam, textLineBounded)
 
 import Data.Colour.Names (black, yellow)
 
+import System.IO.Unsafe
 
 data TestState = TestState (MarkedText CursorMark)
 
@@ -26,6 +27,7 @@ handleKey True e (TestState mt) = TestState $ case e of
     "Return"    -> insert "\n"
     "Left"      -> moveCursor (-1)
     "Right"     -> moveCursor (1)
+    "Escape"    -> unsafePerformIO $ (quitToy >> return mt)
 --    "Delete"    -> 
 --    "BackSpace" -> 
     _           -> mt
