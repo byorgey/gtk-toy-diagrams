@@ -1,3 +1,7 @@
+{-# LANGUAGE MultiParamTypeClasses
+           , TypeSynonymInstances
+           , FlexibleInstances
+           , FlexibleContexts #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.UI.Gtk.Toy.Diagrams
@@ -9,7 +13,11 @@
 -- Portability :  GHC only
 --
 
-module Graphics.UI.Gtk.Toy.Diagrams ( CairoDiagram, diagramsDisplay ) where
+module Graphics.UI.Gtk.Toy.Diagrams
+  ( CairoDiagram, displayDiagram
+  , Diagrammable(..), displayDiagrammable
+  )
+ where
 
 import Diagrams.Prelude
 import Diagrams.Backend.Cairo
@@ -22,9 +30,20 @@ type CairoDiagram = Diagram Cairo R2
 -- I realize this seems silly, but it saves the user from ever even needing to
 -- import any other Gtk modules.
 
-diagramsDisplay :: (a -> CairoDiagram)
+displayDiagram :: (a -> CairoDiagram)
                 -> G.DrawWindow -> InputState -> a -> IO a
-diagramsDisplay f dw _ x = (renderToGtk dw $ f x) >> return x
+displayDiagram f dw _ x = (renderToGtk dw $ f x) >> return x
+
+class Diagrammable a b v where
+  toDiagram :: a -> Diagram b v
+
+instance Diagrammable (Diagram b v) b v where
+  toDiagram = id
+
+displayDiagrammable :: Diagrammable a Cairo R2
+                    => G.DrawWindow -> InputState -> a -> IO a
+displayDiagrammable = displayDiagram toDiagram
+
 
 {-
 -- Re-expors Graphics.UI.Gtk.Toy's functionality under the guise of a

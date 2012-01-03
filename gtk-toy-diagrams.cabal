@@ -25,6 +25,7 @@ Library
   Hs-source-dirs:    src
   Exposed-Modules:
     Graphics.UI.Gtk.Toy.Diagrams
+    Graphics.UI.Gtk.Toy.Draggable
     Graphics.UI.Gtk.Toy.Text
 
 executable test

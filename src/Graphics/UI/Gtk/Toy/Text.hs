@@ -1,13 +1,26 @@
-{-# LANGUAGE TupleSections, ScopedTypeVariables, RankNTypes #-}
+{-# LANGUAGE TupleSections
+           , ScopedTypeVariables
+           , RankNTypes
+  #-}
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Graphics.UI.Gtk.Toy.Text
+-- Copyright   :  (c) 2011 Michael Sloan (see LICENSE)
+-- License     :  BSD-style (see LICENSE)
+-- Maintainer  :  mgsloan@gmail.com
+--
+-- Provides a (currently inefficient) representation of text with styling and
+-- metadata annotations applied to particular intervals.
+--
+-----------------------------------------------------------------------------
 module Graphics.UI.Gtk.Toy.Text where
 
 import Graphics.UI.Gtk.Toy
 import Graphics.UI.Gtk.Toy.Diagrams
 
-import Diagrams.Prelude hiding ((<.>))
+import Diagrams.Prelude
 import Diagrams.TwoD.Text
-import Diagrams.Backend.Cairo.Unsafe
-  (StyleParam, textLineBounded, kerningCorrection)
+import Diagrams.Backend.Cairo.Unsafe (StyleParam, textLineBounded)
 
 import Control.Arrow (first, second, (***), (&&&))
 import Control.Applicative ((<$>))
@@ -15,7 +28,7 @@ import Control.Monad (msum)
 
 import Data.Colour.Names (black, white)
 import Data.Label
-import Data.List (partition, findIndices, sortBy, sort, delete, group)
+import Data.List (partition, findIndices, sortBy, sort, delete, group, (\\))
 import Data.Maybe (fromJust, catMaybes, maybeToList)
 import Data.Ord (comparing)
 
@@ -32,11 +45,16 @@ class CanBeCursor a where
 
 -- TODO: function to handle mark splitting
 
+-- TODO: rename all m type variables to something else..
+
 class Mark a where
   drawMark :: a -> String -> CairoDiagram -> CairoDiagram
   mergeMark :: a -> a -> Maybe a
   drawMark _ _ = id
   mergeMark _ _ = Nothing
+
+emptyText :: MarkedText m
+emptyText = MarkedText "" []
 
 -- | Extract an interval of the text.
 substrText :: Ivl -> MarkedText m -> MarkedText m
@@ -92,9 +110,10 @@ drawText style mt
  where
   dummyPad = ([((0,0), ("", [])), ((0,1), (" ", []))] ++)
 --TODO: sweepline-style context accumulation would be more efficient.
-  chunk l1 l2 (_,(t,ms)) = foldr (`drawMark` t) (text t l1 l2) ms
-  text t (_,(s1,_)) (_,(s2,_)) = textLineBounded style t
-    ||| strutX (debug $ kerningCorrection style (last $ s1 ++ s2) $ head t)
+  chunk l1 l2 (_,(t,ms)) = foldr (`drawMark` t) (text l1 l2 t) ms
+  text (_,(s1,_)) (_,(s2,_)) t 
+    = --strutX (kerningCorrection style (last $ s1 ++ s2) $ head t) |||
+      textLineBounded style t
   window3 f (x:y:z:xs) = f x y z : window3 f (y:z:xs)
   window3 f _ = []
 
@@ -145,16 +164,13 @@ edit :: (Eq m, Mark m, Show m) => (Chunk m -> [Edit m])
      -> MarkedText m -> MarkedText m
 edit f mt = (`applyEdits` mt) . concatMap f $ textChunks mt
 
--- | Enumerates all of the chunks of the text.  The function provided as the
---   first argument is applied to each, resulting in a
-editLocal :: (Eq m, Mark m, Show m) => (Chunk m -> Maybe (MarkedText m))
-         -> MarkedText m -> MarkedText m
-editLocal f = edit (maybeToList . raiseSndA . (fst &&& f))
+-- | Creates an editing function that replaces chunks.
+--inplace :: (Chunk m -> Maybe (MarkedText m)) -> [Edit m]
+inplace f = maybeToList . raiseSndA . (fst &&& f)
 
 -- | This is useful for building functions to use with editLocal.  It applies
 --   the second function when the first one matches a particular mark.
-whenMarked :: (m -> Bool) -> (Chunk m -> MarkedText m)
-           -> Chunk m -> Maybe (MarkedText m)
+whenMarked :: (Monoid m) => (a -> Bool) -> (Chunk a -> b) -> Chunk a -> m b
 whenMarked f g x@(_, (_, ms))
   | any f ms = Just $ g x
   | otherwise = Nothing
@@ -176,6 +192,16 @@ addMark (ivl, m) = mutateSlice
 removeMark :: ((Ivl, m) -> Bool) -> MarkedText m -> MarkedText m
 removeMark f (MarkedText txt xs) = MarkedText txt $ filter (not . f) xs
 
+mutateMarks :: (Eq m, Mark m, Show m)
+            => ((Ivl, m) -> Maybe (Ivl, m)) -> MarkedText m -> MarkedText m
+mutateMarks f (MarkedText t ms) = MarkedText t $ ms' ++ (ms \\ del)
+ where
+  (del, ms') = unzip . catMaybes $ map (raiseSndA . (id &&& f)) ms
+
+moveCursor f (i, x) 
+  | isCursor x = (f i, x)
+  | otherwise = (i, x)
+
 -- Builtin Marks
 
 data CursorMark = CursorMark deriving (Eq, Show)
@@ -187,7 +213,7 @@ instance CanBeCursor CursorMark where
 instance Mark CursorMark where
   drawMark _ str td
     | null str = lineWidth 1 . lineColor black
-               . moveOriginBy (2.5, 2)
+               . moveOriginBy (-1.5, 2)
                . setBounds mempty
                . stroke . pathFromTrail
                $ Trail [Linear (0, 18)] False
@@ -231,7 +257,6 @@ raiseSndA (x, y) = (x,) <$> y
 flipOrd LT = GT
 flipOrd EQ = EQ
 flipOrd GT = LT
-
 
 -- Integer interval utilities
 type Ivl = (Int, Int)
