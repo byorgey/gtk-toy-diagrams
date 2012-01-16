@@ -4,8 +4,6 @@ import Graphics.UI.Gtk.Toy.Draggable
 
 import Diagrams.Prelude
 
-import Debug.Trace
-
 data TestState = TestState (Draggable CairoDiagram)
 
 instance Interactive TestState where
