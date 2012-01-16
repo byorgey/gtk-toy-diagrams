@@ -21,14 +21,18 @@ instance Interactive State where
 
   display = displayDiagram 
           $ \(State _ hm) -> (mconcat . map toDiagram $ M.elems hm)
+  
+  keyboard = quitKeyboard
 
 updateHandles :: State -> State
 updateHandles (State e hm) = State (modify particles (M.intersectionWith constrain hm) e)
                                    (M.intersectionWith update hm (get particles e))
  where
+-- Move particle to its handle if dragged.
   constrain d p 
     | isDragging d = set pos (P $ dragOffset d) p
     | otherwise    = p
+-- Move non-dragging handles to their particles.
   update d (get pos -> P p)
     | isDragging d = d
     | otherwise    = set dragOffsetAcc p d
