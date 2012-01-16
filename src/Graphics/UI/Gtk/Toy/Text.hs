@@ -20,7 +20,7 @@ import Graphics.UI.Gtk.Toy.Diagrams
 
 import Diagrams.Prelude
 import Diagrams.TwoD.Text
-import Diagrams.Backend.Cairo.Unsafe (StyleParam, textLineBounded)
+import Diagrams.Backend.Cairo.Text (StyleParam, textLineBounded)
 
 import Control.Arrow (first, second, (***), (&&&))
 import Control.Applicative ((<$>))
@@ -165,12 +165,12 @@ edit :: (Eq m, Mark m, Show m) => (Chunk m -> [Edit m])
 edit f mt = (`applyEdits` mt) . concatMap f $ textChunks mt
 
 -- | Creates an editing function that replaces chunks.
---inplace :: (Chunk m -> Maybe (MarkedText m)) -> [Edit m]
+inplace :: (Chunk m -> Maybe (MarkedText m)) -> Chunk m -> [Edit m]
 inplace f = maybeToList . raiseSndA . (fst &&& f)
 
 -- | This is useful for building functions to use with editLocal.  It applies
 --   the second function when the first one matches a particular mark.
-whenMarked :: (Monoid m) => (a -> Bool) -> (Chunk a -> b) -> Chunk a -> m b
+whenMarked :: (a -> Bool) -> (Chunk a -> b) -> Chunk a -> Maybe b
 whenMarked f g x@(_, (_, ms))
   | any f ms = Just $ g x
   | otherwise = Nothing

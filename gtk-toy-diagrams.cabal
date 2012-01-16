@@ -21,15 +21,17 @@ Library
                      diagrams-contrib,
                      fclabels,
                      gtk,
-                     gtk-toy
+                     gtk-toy,
+                     syb
   Hs-source-dirs:    src
   Exposed-Modules:
     Graphics.UI.Gtk.Toy.Diagrams
     Graphics.UI.Gtk.Toy.Draggable
+--    Graphics.UI.Gtk.Toy.Generic
     Graphics.UI.Gtk.Toy.Text
 
-executable test
-  Main-Is:           examples/Test.hs
+executable testText
+  Main-Is:           src/TestText.hs
   Build-Depends:     base,
                      containers,
                      colour,

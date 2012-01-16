@@ -1,4 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses
+           , TemplateHaskell
            , TypeSynonymInstances
            , FlexibleInstances
            , FlexibleContexts
@@ -10,48 +11,93 @@
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  mgsloan@gmail.com
 --
--- Functions for things that can be clicked and dragged in order to move them.
+-- Functions for things that can be clicked and dragged around.
 --
 -----------------------------------------------------------------------------
-module Graphics.UI.Gtk.Toy.Draggable where
+module Graphics.UI.Gtk.Toy.Draggable
+  ( Clickable(..)
+  , Draggable(..)
+
+  -- * Lenses
+  , dragState, dragOffsetAcc, dragContent
+
+  -- * Interaction with mouse
+  -- | Starts drag when mouse 1 (left) is pressed, and ends when released.
+  , mouseDrag
+
+  -- * Functions to create 
+  , mkDraggable, startDrag, updateDrag, endDrag, dragOffset) where
 
 import Graphics.UI.Gtk.Toy
 import Graphics.UI.Gtk.Toy.Diagrams
+
+import Control.Arrow (first)
+import Control.Category ((.))
+import Prelude hiding ((.))
+
+import Data.Label
+import qualified Data.Label.Maybe as LM
 
 import Diagrams.Backend.Cairo
 import Diagrams.Prelude
 import Diagrams.TwoD.Text
 
-data Draggable a = Draggable (Maybe (R2, R2)) R2 a
-
+-- | Clickable things have some concept of which positions are clickable.
 class Clickable a where
   clickInside :: a -> R2 -> Bool
 
 instance Clickable CairoDiagram where
   clickInside d = getAny . runQuery (query d) . P
+
  
-instance (Diagrammable a Cairo R2)
- => Diagrammable (Draggable a) Cairo R2 where
+-- | Draggable things are translatable, and store state during the drag
+--   process.
+data Draggable a = Draggable 
+  { _dragState :: (Maybe (R2, R2))
+  , _dragOffsetAcc :: R2
+  , _dragContent :: a
+  }
+
+$(mkLabels [''Draggable])
+
+instance Diagrammable a Cairo R2
+      => Diagrammable (Draggable a) Cairo R2 where
   toDiagram d@(Draggable _ _ a)
     = translate (dragOffset d) $ toDiagram a
 
 instance (Diagrammable a Cairo R2, Clickable a)
- => Interactive (Draggable a) where
+      => Interactive (Draggable a) where
   display = displayDiagrammable
-  mouse = simpleMouse handleMouse
+  mouse = simpleMouse mouseDrag
 
-handleMouse :: Clickable a
-            => R2 -> (Maybe (Bool, Int)) -> Draggable a -> Draggable a
-handleMouse pos (Just (True, 0)) d@(Draggable _ o a)
-  | clickInside a pos = Draggable (Just (pos, pos)) o a
-handleMouse pos (Just (False, 0)) d
-  = unDrag d
-handleMouse pos _ (Draggable (Just (_, s)) o a)
-  = Draggable (Just (pos, s)) o a
+instance Clickable a
+      => Clickable (Draggable a) where
+  clickInside d p = clickInside (_dragContent d) $ p ^-^ dragOffset d
 
--- | Switches the diagram out of dragging mode.
-unDrag :: Draggable a -> Draggable a
-unDrag d@(Draggable _ _ a) = Draggable Nothing (dragOffset d) a
+-- | Creates dragging state for some object, with an initial offset.
+mkDraggable :: R2 -> a -> Draggable a
+mkDraggable = Draggable Nothing
+
+-- | Pure mouse handler, compatible with the type expected by "simpleMouse".
+mouseDrag p (Just (True,  0)) d | clickInside d p = startDrag p d
+mouseDrag p Nothing           d                   = updateDrag p d
+mouseDrag p (Just (False, 0)) d                   = endDrag d
+mouseDrag _ _ d = d
+
+-- | Switches into dragging mode at the given position.
+startDrag :: R2 -> Draggable a -> Draggable a
+startDrag p = set dragState (Just (p, p))
+
+-- | Updates the drag with a new mouse position, if the object is being
+--   dragged.  TODO: consider having a check for the input state to
+--   check if the mouse is being held down?
+updateDrag :: R2 -> Draggable a -> Draggable a
+updateDrag p (Draggable (Just (_, s)) o c) = Draggable (Just (p, s)) o c
+updateDrag _ d = d
+
+-- | Switches out of dragging mode.
+endDrag :: Draggable a -> Draggable a
+endDrag d = Draggable Nothing (dragOffset d) $ _dragContent d
 
 -- | Gets the current amount of drag-induced offset for the diagram.
-dragOffset (Draggable c o _) = o ^+^ (maybe (0, 0) (uncurry (^-^)) c)
+dragOffset (Draggable c o _) =  o ^+^ (maybe (0, 0) (uncurry (^-^)) c)
