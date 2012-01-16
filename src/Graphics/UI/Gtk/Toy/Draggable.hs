@@ -25,18 +25,17 @@ module Graphics.UI.Gtk.Toy.Draggable
   -- | Starts drag when mouse 1 (left) is pressed, and ends when released.
   , mouseDrag
 
-  -- * Functions to create 
-  , mkDraggable, startDrag, updateDrag, endDrag, dragOffset) where
+  -- * Update
+  , mkDraggable, startDrag, updateDrag, endDrag
+
+  -- * Query
+  , isDragging, dragOffset) where
 
 import Graphics.UI.Gtk.Toy
 import Graphics.UI.Gtk.Toy.Diagrams
 
-import Control.Arrow (first)
-import Control.Category ((.))
-import Prelude hiding ((.))
-
 import Data.Label
-import qualified Data.Label.Maybe as LM
+import Data.Maybe (isJust)
 
 import Diagrams.Backend.Cairo
 import Diagrams.Prelude
@@ -98,6 +97,9 @@ updateDrag _ d = d
 -- | Switches out of dragging mode.
 endDrag :: Draggable a -> Draggable a
 endDrag d = Draggable Nothing (dragOffset d) $ _dragContent d
+
+isDragging :: Draggable a -> Bool
+isDragging = isJust . get dragState
 
 -- | Gets the current amount of drag-induced offset for the diagram.
 dragOffset (Draggable c o _) =  o ^+^ (maybe (0, 0) (uncurry (^-^)) c)
