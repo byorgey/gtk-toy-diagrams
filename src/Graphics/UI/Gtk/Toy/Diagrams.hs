@@ -1,9 +1,9 @@
-{-# LANGUAGE MultiParamTypeClasses
+{-# LANGUAGE FlexibleInstances
+           , FlexibleContexts 
+           , MultiParamTypeClasses
            , ScopedTypeVariables
            , TupleSections
            , TypeSynonymInstances
-           , FlexibleInstances
-           , FlexibleContexts 
            , UndecidableInstances
            #-}
 -----------------------------------------------------------------------------
@@ -54,8 +54,7 @@ diagramFoldable ::
 diagramFoldable = T.foldMapDefault toDiagram
 
 -- | Wrapper for making traversable things interactive.
-data (T.Traversable t, Diagrammable a Cairo R2, Interactive a)
-  => ToyTraversable t a = ToyTraversable (t a)
+data ToyTraversable t a = ToyTraversable (t a)
 
 withTT :: (T.Traversable t, Diagrammable a Cairo R2, Interactive a)
        => (t a -> IO (t a)) -> ToyTraversable t a -> IO (ToyTraversable t a)
