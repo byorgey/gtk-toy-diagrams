@@ -205,8 +205,9 @@ clipMarks :: (Eq m, Mark m) => MarkedText m -> MarkedText m
 clipMarks mt = modify marks (uncurry performMerges . partitionEithers . map process) mt
  where
   l = textLength mt
-  process ((f, t), m) | f < 0 || t < 0 || f > l || t > l = Left ((wrap f, wrap t), m)
-                      | otherwise = Right ((f, t), m)
+  process ((f, t), m)
+    | f < 0 || t < 0 || f > l || t > l = Left ((wrap f, wrap t), m)
+    | otherwise = Right ((f, t), m)
   wrap = max 0 . min (textLength mt)
 
 -- Builtin Marks

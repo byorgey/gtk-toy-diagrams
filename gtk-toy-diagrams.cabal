@@ -21,8 +21,7 @@ Library
                      diagrams-contrib,
                      fclabels,
                      gtk,
-                     gtk-toy,
-                     syb
+                     gtk-toy
   Hs-source-dirs:    src
   Exposed-Modules:
     Graphics.UI.Gtk.Toy.Diagrams
@@ -30,8 +29,8 @@ Library
 --    Graphics.UI.Gtk.Toy.Generic
     Graphics.UI.Gtk.Toy.Text
 
-executable testText
-  Main-Is:           src/TestText.hs
+executable textDemo
+  Main-Is:           src/Text.hs
   Build-Depends:     base,
                      containers,
                      colour,
@@ -39,5 +38,31 @@ executable testText
                      diagrams-cairo,
                      diagrams-contrib,
                      fclabels,
+                     gtk-toy,
+                     gtk-toy-diagrams
+
+executable handlesDemo
+  Main-Is:           src/Handles.hs
+  Build-Depends:     base,
+                     containers,
+                     colour,
+                     diagrams-lib,
+                     diagrams-cairo,
+                     diagrams-contrib,
+                     fclabels,
+                     gtk,
+                     gtk-toy,
+                     gtk-toy-diagrams
+
+executable forceLayoutDemo 
+  Main-Is:           src/ForceLayout.hs
+  Build-Depends:     base,
+                     containers,
+                     colour,
+                     diagrams-lib,
+                     diagrams-cairo,
+                     diagrams-contrib,
+                     fclabels,
+                     force-layout,
                      gtk-toy,
                      gtk-toy-diagrams

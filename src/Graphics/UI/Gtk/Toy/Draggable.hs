@@ -66,7 +66,7 @@ instance Diagrammable a Cairo R2
 
 instance (Diagrammable a Cairo R2, Clickable a)
       => Interactive (Draggable a) where
-  display = displayDiagrammable
+  display = displayDiagram toDiagram
   mouse = simpleMouse mouseDrag
 
 instance Clickable a
@@ -78,9 +78,9 @@ mkDraggable :: R2 -> a -> Draggable a
 mkDraggable = Draggable Nothing
 
 -- | Pure mouse handler, compatible with the type expected by "simpleMouse".
-mouseDrag p (Just (True,  0)) d | clickInside d p = startDrag p d
-mouseDrag p Nothing           d                   = updateDrag p d
-mouseDrag p (Just (False, 0)) d                   = endDrag d
+mouseDrag (Just (True,  0)) p d | clickInside d p = startDrag p d
+mouseDrag Nothing           p d                   = updateDrag p d
+mouseDrag (Just (False, 0)) p d                   = endDrag d
 mouseDrag _ _ d = d
 
 -- | Switches into dragging mode at the given position.
@@ -98,6 +98,7 @@ updateDrag _ d = d
 endDrag :: Draggable a -> Draggable a
 endDrag d = Draggable Nothing (dragOffset d) $ _dragContent d
 
+-- | Queries whether we're currently in dragging-modk
 isDragging :: Draggable a -> Bool
 isDragging = isJust . get dragState
 

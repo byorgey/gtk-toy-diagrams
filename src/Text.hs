@@ -1,3 +1,5 @@
+module Text where
+
 import Graphics.UI.Gtk.Toy
 import Graphics.UI.Gtk.Toy.Diagrams
 import Graphics.UI.Gtk.Toy.Text
@@ -13,19 +15,18 @@ import Data.Maybe (maybeToList)
 
 import System.IO.Unsafe
 
-data TestState = TestState (MarkedText CursorMark) deriving Show
+main = runToy $ MarkedText "Hello, world!!" [((5,5), CursorMark)]
 
-main = runToy . TestState $ MarkedText "Hello, world!!" [((5,5), CursorMark)]
-
-instance Interactive TestState where
+instance (Eq m, Show m, Mark m, CanBeCursor m)
+      => Interactive (MarkedText m) where
   keyboard = simpleKeyboard handleKey
-  display = displayDiagram handleDisplay
+  display  = displayDiagram handleDisplay
 
-handleDisplay (TestState mt)
+handleDisplay mt
   = scaleY (-1) . (strutX 100 |||) . (strutY 100 ===)
   $ drawText (font "monospace" . fontSize 18) mt
 
-handleKey True e (TestState mt) = TestState $ case e of
+handleKey (True, e) mt = case e of
   Right k -> insert [k]
   Left  k -> case k of
     "Return"    -> insert "\n"
@@ -38,15 +39,15 @@ handleKey True e (TestState mt) = TestState $ case e of
     "Escape"    -> unsafePerformIO $ (quitToy >> return mt)
     _           -> mt
  where
-  justCursor = MarkedText "" [((0, 0), CursorMark)]
+  justCursor = MarkedText "" [((0, 0), mkCursor)]
   editCursors f = edit (whenMarked isCursor f) mt
-  insert s = editCursors $ second $ const (MarkedText s [((p, p), CursorMark)])
+  insert s = editCursors $ second $ const (MarkedText s [((p, p), mkCursor)])
     where p = length s
   mutateCursors f = clipMarks . editCursors . second . mutateMarks
                   $ \m -> first f <$> toMaybe (isCursor . snd) m
   maxIx = textLength mt
 
-handleKey _ _ ts = ts
+handleKey _ ts = ts
 
 toMaybe :: (a -> Bool) -> a -> Maybe a
 toMaybe f x = if f x then Just x else Nothing

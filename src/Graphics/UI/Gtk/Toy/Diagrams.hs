@@ -1,7 +1,11 @@
 {-# LANGUAGE MultiParamTypeClasses
+           , ScopedTypeVariables
+           , TupleSections
            , TypeSynonymInstances
            , FlexibleInstances
-           , FlexibleContexts #-}
+           , FlexibleContexts 
+           , UndecidableInstances
+           #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.UI.Gtk.Toy.Diagrams
@@ -15,21 +19,23 @@
 
 module Graphics.UI.Gtk.Toy.Diagrams
   ( CairoDiagram, displayDiagram
-  , Diagrammable(..), displayDiagrammable
+  , Diagrammable(..), ToyTraversable(..)
   )
  where
 
 import Diagrams.Prelude
 import Diagrams.Backend.Cairo
 import Diagrams.Backend.Cairo.Gtk
+
+import Control.Arrow ((***))
+import qualified Data.Traversable as T
 import qualified Graphics.UI.Gtk as G
 import Graphics.UI.Gtk.Toy
 
 type CairoDiagram = Diagram Cairo R2
 
--- I realize this seems silly, but it saves the user from ever even needing to
--- import any other Gtk modules.
-
+-- | Convenience function for implementing the display function of
+--   Interactive.
 displayDiagram :: (a -> CairoDiagram)
                 -> G.DrawWindow -> InputState -> a -> IO a
 displayDiagram f dw _ x = (renderToGtk dw $ f x) >> return x
@@ -40,11 +46,34 @@ class Diagrammable a b v where
 instance Diagrammable (Diagram b v) b v where
   toDiagram = id
 
-displayDiagrammable :: Diagrammable a Cairo R2
-                    => G.DrawWindow -> InputState -> a -> IO a
-displayDiagrammable = displayDiagram toDiagram
+diagramFoldable ::
+         ( T.Traversable t
+         , Diagrammable a b v
+         , InnerSpace v, HasLinearMap v, OrderedField (Scalar v) )
+         => t a -> Diagram b v
+diagramFoldable = T.foldMapDefault toDiagram
 
+-- | Wrapper for making traversable things interactive.
+data (T.Traversable t, Diagrammable a Cairo R2, Interactive a)
+  => ToyTraversable t a = ToyTraversable (t a)
 
+withTT :: (T.Traversable t, Diagrammable a Cairo R2, Interactive a)
+       => (t a -> IO (t a)) -> ToyTraversable t a -> IO (ToyTraversable t a)
+withTT f (ToyTraversable x) = ToyTraversable <$> f x
+
+instance ( T.Traversable t, Diagrammable a Cairo R2, Interactive a )
+      => Interactive (ToyTraversable t a) where
+
+  -- TODO: or together the boolean results
+  tick i x = (,True) <$> withTT ttick x
+   where ttick = T.traverse $ \y -> fst <$> tick i y
+
+  display dw i (ToyTraversable x)
+    = ToyTraversable <$> displayDiagram diagramFoldable dw i x
+
+  mouse   m i  = withTT $ T.traverse (mouse m i)
+  keyboard k i = withTT $ T.traverse (keyboard k i)
+ 
 {-
 -- Re-expors Graphics.UI.Gtk.Toy's functionality under the guise of a
 -- new typeclass, 
