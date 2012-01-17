@@ -73,35 +73,3 @@ instance ( T.Traversable t, Diagrammable a Cairo R2, Interactive a )
 
   mouse   m i  = withTT $ T.traverse (mouse m i)
   keyboard k i = withTT $ T.traverse (keyboard k i)
- 
-{-
--- Re-expors Graphics.UI.Gtk.Toy's functionality under the guise of a
--- new typeclass, 
-
-type StateId = Int
-
-class HasStateId a where
-  getStateId :: a -> StateId
-
--- TODO: what about IO? sure it's evil, but what if this is the root of the app?
-
-class HasStateId a => InteractiveDiagram a where
-  -- | Tick is (ideally) called every 30ms.
-  tick     :: a -> a
-
-  -- | Display is called when the rendering needs to be refreshed.
-  display  :: a -> CDiagram
-
-  -- | Mouse is called when the mouse moves or presses occur.
-  mouse    :: (Double, Double) -> Maybe (Bool, Int) -> a -> a
-
-  -- | Keyboard is called when 
-  keyboard :: Bool -> Either String Char -> a -> a
-
-instance InteractiveDiagram a => T.Interactive a where
-  T.tick     = T.simpleTick tick
-  T.display  = T.simpleDisplay (\dw -> renderToGtk
-  T.keyboard = T.simpleKeyboard keyboard
-  T.mouse c inp = return . mouse (T.mousePos inp) c
-
--}
