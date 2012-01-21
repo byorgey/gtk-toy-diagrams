@@ -54,8 +54,11 @@ class CanBeCursor a where
 -- TODO: rename all m type variables to something else..
 
 class Mark a where
+  -- TODO: use
+  styleMark :: a -> StyleParam
   drawMark :: a -> String -> CairoDiagram -> CairoDiagram
   mergeMark :: a -> a -> Maybe a
+  styleMark _ = id
   drawMark _ _ = id
   mergeMark _ _ = Nothing
 
@@ -78,7 +81,7 @@ substrText inc (MarkedText str ms) ivl@(f, t)
 
 -- | Concatenates two marked texts together, attempting to merge the marks
 --   incident on the join.
-addText :: forall m. (Mark m, Eq m, Show m) 
+addText :: forall m. (Mark m, Eq m) 
       => MarkedText m -> MarkedText m -> MarkedText m
 addText (MarkedText at ams) (MarkedText bt bms)
   = MarkedText (at ++ bt) rms
@@ -108,12 +111,52 @@ performMerges (x:xs) ys = case msum . map doMerge $ ys of
 --TODO: consider a mark for lines / line #s?
 --TODO: figure out how style will be applied to the text by marks
 
+-- | Draws the marked text, given an initial style to apply.
+{-
+drawText :: (Show a, Mark a) => StyleParma -> MarkedText a -> CairoDiagram
+drawText style mt =
+  . 
+  . map (drawLine . (substrText True mt) . (second (+1)))
+  . ivlsFromSlices (textLength mt)
+  . findIndices (=='\n')
+  $ _text mt
+ where
+  drawLine l = map (hcat
+             . mergeCompatible containment
+             . map (, [])
+             . sortBy (comparing $ uncurry (-) . fst)
+             $ _marks l
+  
+  text (_, MarkedText s1 _) (_, MarkedText s2 _) t
+    = --strutX (kerningCorrection style (last $ s1 ++ s2) $ head t) |||
+      textLineBounded style t
+  containment ((i1, m1), xs) (x@(i2, m2), ys)
+    | i1 `ivlContainsIvl` i2 = Just ((i1, m1), ys ++ x:xs)
+    | otherwise = Nothing
+
+
+-- List utility used in drawText
+
+mergeCompatible _ [] = []
+mergeCompatible _ [x] = [x]
+mergeCompatible f (x:xs)
+  = case extractJust (f x) xs of
+      Just (r, rs) -> mergeCompatible f (r:rs)
+      Nothing -> x : mergeCompatible f xs
+
+-- Removes the first element that yields a "Just".
+extractJust :: (a -> Maybe b) -> [a] -> Maybe (b, [a])
+extractJust f [] = Nothing
+extractJust f (x:xs) = case f x of
+  Just y  -> Just (y, xs)
+  Nothing -> second (x:) <$> extractJust f xs
+-}
+
 -- | Draws the marked text, given a style to apply by default to the unmarked text.
-drawText :: (Show a, Mark a) => StyleParam -> MarkedText a -> CairoDiagram
+drawText :: (Mark a) => StyleParam -> MarkedText a -> CairoDiagram
 drawText style mt
   = vcat
   . map (hcat . window3 chunk . dummyPad)
-  . debug
   . map (textChunks . (substrText True mt) . (second (+1)))
   . ivlsFromSlices (textLength mt)
   . findIndices (=='\n')
@@ -127,7 +170,6 @@ drawText style mt
       textLineBounded style t
   window3 f (x:y:z:xs) = f x y z : window3 f (y:z:xs)
   window3 f _ = []
-
 
 -- | A chunk specifies a located marked text.
 type Chunk m = (Ivl, MarkedText m)
@@ -147,7 +189,7 @@ ivlsFromSlices l xs = map head . group $ zip (0 : ys) (ys ++ [l])
 
 textLength = length . _text
 
-applyEdit :: (Eq m, Mark m, Show m) => Chunk m -> MarkedText m -> MarkedText m
+applyEdit :: (Eq m, Mark m) => Chunk m -> MarkedText m -> MarkedText m
 applyEdit ((f, t), sub) mt
   = addText (substrText False mt (-1, f))
   $ addText sub
@@ -155,14 +197,14 @@ applyEdit ((f, t), sub) mt
 
 -- | Applies a set of edits in such a way that the indexing is consistent.
 --   If the edits overlap, then strange things happen.
-applyEdits :: (Eq m, Mark m, Show m) => [Chunk m] -> MarkedText m -> MarkedText m
+applyEdits :: (Eq m, Mark m) => [Chunk m] -> MarkedText m -> MarkedText m
 applyEdits edits mt
   = foldr applyEdit mt
   $ sortBy (\l -> flipOrd . comparing fst l) edits
 
 -- | Enumerates all of the chunks of the text. The function provided as the
 --   first argument is applied to each, yielding a set of edits.
-edit :: (Eq m, Mark m, Show m) => (Chunk m -> [Chunk m])
+edit :: (Eq m, Mark m) => (Chunk m -> [Chunk m])
      -> MarkedText m -> MarkedText m
 edit f mt = (`applyEdits` mt) . concatMap f $ textChunks mt
 
@@ -173,14 +215,14 @@ whenMarked f g x@(_, MarkedText _ ms)
   | otherwise = []
 
 -- | Mutates a given interval of the text.
-mutateSlice :: (Eq m, Show m, Mark m)
+mutateSlice :: (Eq m, Mark m)
             => (MarkedText m -> MarkedText m) -> Ivl
             -> MarkedText m -> MarkedText m
 mutateSlice f i mt = applyEdit (i, f $ substrText True mt i) mt
 
 -- TODO: make more efficient - should be able to avoid slicing text.
 -- | Applies a mark to the given interval.
-addMark :: (Eq m, Show m, Mark m)
+addMark :: (Eq m, Mark m)
         => (Ivl, m) -> MarkedText m -> MarkedText m
 addMark (ivl, m) = mutateSlice 
   (\(MarkedText txt ms) -> MarkedText txt $ (ivl, m) : ms) ivl
@@ -189,7 +231,7 @@ addMark (ivl, m) = mutateSlice
 removeMark :: ((Ivl, m) -> Bool) -> MarkedText m -> MarkedText m
 removeMark f (MarkedText txt xs) = MarkedText txt $ filter (not . f) xs
 
-mutateMarks :: (Eq m, Mark m, Show m)
+mutateMarks :: (Eq m, Mark m)
                => ((Ivl, m) -> Maybe (Ivl, m)) -> MarkedText m -> MarkedText m
 mutateMarks f (MarkedText t ms) = MarkedText t $ ms' ++ (ms \\ del)
  where
@@ -289,6 +331,9 @@ ivlOverlaps a@(f1, t1) b@(f2, t2)
 
 ivlContains :: Ivl -> Int -> Bool
 ivlContains (f, t) x = f <= x && x <= t
+
+ivlContainsIvl :: Ivl -> Ivl -> Bool
+ivlContainsIvl i (f, t) = ivlContains i f && ivlContains i t
 
 ivlUnion :: Ivl -> Ivl -> Ivl
 ivlUnion (f1, t1) (f2, t2) = (min f1 f2, max t1 t2)

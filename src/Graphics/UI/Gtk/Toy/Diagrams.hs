@@ -16,7 +16,7 @@
 -- Stability   :  experimental
 -- Portability :  GHC only
 --
-
+-----------------------------------------------------------------------------
 module Graphics.UI.Gtk.Toy.Diagrams
   ( CairoDiagram, displayDiagram
   , Diagrammable(..), ToyTraversable(..)

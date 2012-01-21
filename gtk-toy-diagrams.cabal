@@ -27,9 +27,11 @@ Library
     Graphics.UI.Gtk.Toy.Diagrams
     Graphics.UI.Gtk.Toy.Draggable
 --    Graphics.UI.Gtk.Toy.Generic
+    Graphics.UI.Gtk.Toy.Wrap
     Graphics.UI.Gtk.Toy.Text
+    Graphics.UI.Gtk.Toy.Text.Interactive
 
-executable textDemo
+executable text
   Main-Is:           src/Text.hs
   Build-Depends:     base,
                      containers,
@@ -41,7 +43,7 @@ executable textDemo
                      gtk-toy,
                      gtk-toy-diagrams
 
-executable handlesDemo
+executable handles
   Main-Is:           src/Handles.hs
   Build-Depends:     base,
                      containers,
@@ -54,7 +56,18 @@ executable handlesDemo
                      gtk-toy,
                      gtk-toy-diagrams
 
-executable forceLayoutDemo 
+executable wrap
+  Main-Is:           src/Wrap.hs
+  Build-Depends:     base,
+                     containers,
+                     colour,
+                     diagrams-lib,
+                     diagrams-cairo,
+                     diagrams-contrib,
+                     gtk-toy,
+                     gtk-toy-diagrams
+
+executable forceLayout
   Main-Is:           src/ForceLayout.hs
   Build-Depends:     base,
                      containers,
