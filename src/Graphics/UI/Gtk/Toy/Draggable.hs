@@ -59,6 +59,9 @@ data Draggable a = Draggable
 
 $(mkLabels [''Draggable])
 
+instance Functor Draggable where
+  fmap f (Draggable s o c) = Draggable s o $ f c
+
 instance Diagrammable a Cairo R2
       => Diagrammable (Draggable a) Cairo R2 where
   toDiagram d@(Draggable _ _ a)

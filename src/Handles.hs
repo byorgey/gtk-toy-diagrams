@@ -1,8 +1,4 @@
-import Graphics.UI.Gtk.Toy
-import Graphics.UI.Gtk.Toy.Diagrams
-import Graphics.UI.Gtk.Toy.Draggable
-
-import Diagrams.Prelude
+import Graphics.UI.Gtk.Toy.Prelude
 
 type HandlesState = ToyTraversable [] (Draggable CairoDiagram)
 

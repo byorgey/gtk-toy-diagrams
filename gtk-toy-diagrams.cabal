@@ -27,9 +27,10 @@ Library
     Graphics.UI.Gtk.Toy.Diagrams
     Graphics.UI.Gtk.Toy.Draggable
 --    Graphics.UI.Gtk.Toy.Generic
-    Graphics.UI.Gtk.Toy.Wrap
+    Graphics.UI.Gtk.Toy.Prelude
     Graphics.UI.Gtk.Toy.Text
     Graphics.UI.Gtk.Toy.Text.Interactive
+    Graphics.UI.Gtk.Toy.Wrap
 
 executable text
   Main-Is:           src/Text.hs
@@ -64,6 +65,7 @@ executable wrap
                      diagrams-lib,
                      diagrams-cairo,
                      diagrams-contrib,
+                     fclabels,
                      gtk-toy,
                      gtk-toy-diagrams
 

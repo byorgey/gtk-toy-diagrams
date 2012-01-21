@@ -1,5 +1,3 @@
-import Graphics.UI.Gtk.Toy
-import Graphics.UI.Gtk.Toy.Text
-import Graphics.UI.Gtk.Toy.Text.Interactive
+import Graphics.UI.Gtk.Toy.Prelude
 
-main = runToy $ (initialState :: MarkedText CursorMark)
+main = runToy $ (cursorText :: MarkedText CursorMark)

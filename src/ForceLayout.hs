@@ -1,10 +1,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
-import Graphics.UI.Gtk.Toy
-import Graphics.UI.Gtk.Toy.Diagrams
-import Graphics.UI.Gtk.Toy.Draggable
+import Graphics.UI.Gtk.Toy.Prelude
 
-import Diagrams.Prelude
 import Physics.ForceLayout
 
 import Data.Label

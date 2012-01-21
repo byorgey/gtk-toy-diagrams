@@ -39,8 +39,8 @@ import Debug.Trace (trace)
 type Ivl = (Int, Int)
 
 data MarkedText m = MarkedText
-  { _text  :: String
-  , _marks :: [(Ivl, m)]
+  { _mText  :: String
+  , _mMarks :: [(Ivl, m)]
   } deriving (Eq, Show)
 
 $(mkLabels [''MarkedText])
@@ -160,7 +160,7 @@ drawText style mt
   . map (textChunks . (substrText True mt) . (second (+1)))
   . ivlsFromSlices (textLength mt)
   . findIndices (=='\n')
-  $ _text mt
+  $ get mText mt
  where
   dummyPad = (replicate 2 ((0,0), emptyText) ++)
 --TODO: sweepline-style context accumulation would be more efficient.
@@ -180,14 +180,15 @@ textChunks :: MarkedText m -> [Chunk m]
 textChunks mt
   = map (id &&& (substrText False mt))
   . ivlsFromSlices (textLength mt)
-  $ concatMap (ivlSlices . fst) $ _marks mt
+  . concatMap (ivlSlices . fst)
+  $ get mMarks mt
 
 -- | Given a list of slice points, and an overall length, yields a list of
 --   intervals broken at those points.
 ivlsFromSlices l xs = map head . group $ zip (0 : ys) (ys ++ [l])
   where ys = sort xs
 
-textLength = length . _text
+textLength = length . get mText
 
 applyEdit :: (Eq m, Mark m) => Chunk m -> MarkedText m -> MarkedText m
 applyEdit ((f, t), sub) mt
@@ -244,7 +245,7 @@ moveCursor f (i, x)
 -- | Crops and merge marks that extend beyond the bounds of the MarkedText.
 --TODO: merge behaviour
 clipMarks :: (Eq m, Mark m) => MarkedText m -> MarkedText m
-clipMarks mt = modify marks (uncurry performMerges . partitionEithers . map process) mt
+clipMarks mt = modify mMarks (uncurry performMerges . partitionEithers . map process) mt
  where
   l = textLength mt
   process ((f, t), m)
