@@ -29,8 +29,8 @@ instance Diagrammable State Cairo R2 where
     axis = [unitX, negateV $ unitY]
     (r, rest) = fillInside (getAny . sample diaBnds) axis (P (10, 10))
               . intersperse (strutX 10)	
-  			      . map (alignTL . plainText) . words
-	            $ get (mText . txt) s
+              . map (alignTL . plainText) . words
+              $ get (mText . txt) s
 
 plainText = monoText . (`MarkedText` ([] :: [(Ivl, CursorMark)]))
 
