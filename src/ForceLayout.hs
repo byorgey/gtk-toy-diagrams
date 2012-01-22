@@ -15,11 +15,12 @@ instance Interactive State where
 
   tick    = simpleTick
           $ \(State e hm) -> updateHandles $ State (ensembleStep 0.1 e) hm
-
-  display = displayDiagram 
-          $ \(State _ hm) -> (mconcat . map toDiagram $ M.elems hm)
   
   keyboard = quitKeyboard
+
+instance GtkInteractive State where
+  display = displayDiagram 
+          $ \(State _ hm) -> (mconcat . map toDiagram $ M.elems hm)
 
 updateHandles :: State -> State
 updateHandles (State e hm) = State (modify particles (M.intersectionWith constrain hm) e)
@@ -27,12 +28,12 @@ updateHandles (State e hm) = State (modify particles (M.intersectionWith constra
  where
 -- Move particle to its handle if dragged.
   constrain d p 
-    | isDragging d = set pos (P $ dragOffset d) p
+    | isDragging d = set pos (P $ get dragOffset d) p
     | otherwise    = p
 -- Move non-dragging handles to their particles.
   update d (get pos -> P p)
     | isDragging d = d
-    | otherwise    = set dragOffsetAcc p d
+    | otherwise    = set dragOffset p d
 
 main = runToy 
      $ State e

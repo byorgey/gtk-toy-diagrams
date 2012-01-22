@@ -7,7 +7,7 @@ Description:
 License:             BSD3
 License-file:        LICENSE
 Author:              Michael Sloan
-Maintainer:          Michael Sloan <mgsloan@gmail.com>
+Maintainer:          Michael Sloan <mgsloan at gmail>
 Stability:           experimental
 Build-Type:          Simple
 
@@ -18,18 +18,23 @@ Library
                      colour,
                      diagrams-lib,
                      diagrams-cairo,
+                     diagrams-core,
                      diagrams-contrib,
                      fclabels,
                      gtk,
-                     gtk-toy
+                     gtk-toy,
+                     newtype,
+                     newtype-th
   Hs-source-dirs:    src
   Exposed-Modules:
     Graphics.UI.Gtk.Toy.Diagrams
     Graphics.UI.Gtk.Toy.Draggable
 --    Graphics.UI.Gtk.Toy.Generic
     Graphics.UI.Gtk.Toy.Prelude
+    Graphics.UI.Gtk.Toy.Slider
     Graphics.UI.Gtk.Toy.Text
     Graphics.UI.Gtk.Toy.Text.Interactive
+    Graphics.UI.Gtk.Toy.Transformed
     Graphics.UI.Gtk.Toy.Wrap
 
 executable text
@@ -42,7 +47,9 @@ executable text
                      diagrams-contrib,
                      fclabels,
                      gtk-toy,
-                     gtk-toy-diagrams
+                     gtk-toy-diagrams,
+                     newtype,
+                     newtype-th
 
 executable handles
   Main-Is:           src/Handles.hs
@@ -55,7 +62,9 @@ executable handles
                      fclabels,
                      gtk,
                      gtk-toy,
-                     gtk-toy-diagrams
+                     gtk-toy-diagrams,
+                     newtype,
+                     newtype-th
 
 executable wrap
   Main-Is:           src/Wrap.hs
@@ -67,7 +76,9 @@ executable wrap
                      diagrams-contrib,
                      fclabels,
                      gtk-toy,
-                     gtk-toy-diagrams
+                     gtk-toy-diagrams,
+                     newtype,
+                     newtype-th
 
 executable forceLayout
   Main-Is:           src/ForceLayout.hs
@@ -80,4 +91,6 @@ executable forceLayout
                      fclabels,
                      force-layout,
                      gtk-toy,
-                     gtk-toy-diagrams
+                     gtk-toy-diagrams,
+                     newtype,
+                     newtype-th

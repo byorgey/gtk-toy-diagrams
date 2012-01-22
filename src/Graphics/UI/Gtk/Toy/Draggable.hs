@@ -4,6 +4,7 @@
            , FlexibleInstances
            , FlexibleContexts
            , TypeFamilies
+           , TypeOperators
            , UndecidableInstances #-}
 -----------------------------------------------------------------------------
 -- |
@@ -20,7 +21,7 @@ module Graphics.UI.Gtk.Toy.Draggable
   , Draggable(..)
 
   -- * Lenses
-  , dragState, dragOffsetAcc, dragContent
+  , dragState, dragOffset, dragContent
 
   -- * Interaction with mouse
   -- | Starts drag when mouse 1 (left) is pressed, and ends when released.
@@ -30,7 +31,7 @@ module Graphics.UI.Gtk.Toy.Draggable
   , mkDraggable, startDrag, updateDrag, endDrag
 
   -- * Query
-  , isDragging, dragOffset) where
+  , isDragging) where
 
 import Graphics.UI.Gtk.Toy
 import Graphics.UI.Gtk.Toy.Diagrams
@@ -42,14 +43,6 @@ import Diagrams.Backend.Cairo
 import Diagrams.Prelude
 import Diagrams.TwoD.Text
 
--- | Clickable things have some concept of which positions are clickable.
-class Clickable a where
-  clickInside :: a -> V a -> Bool
-
-instance Clickable CairoDiagram where
-  clickInside d = getAny . runQuery (query d) . P
-
- 
 -- | Draggable things are translatable, and store state during the drag
 --   process.
 data Draggable a = Draggable 
@@ -66,16 +59,19 @@ instance ( v ~ V a, HasLinearMap v, InnerSpace v, OrderedField (Scalar v)
          , Diagrammable a Cairo v)
       => Diagrammable (Draggable a) Cairo v where
   toDiagram d@(Draggable _ _ a)
-    = translate (dragOffset d) $ toDiagram a
+    = translate (get dragOffset d) $ toDiagram a
+
+instance (R2 ~ V a, Clickable a)
+      => Interactive (Draggable a) where
+  mouse = simpleMouse mouseDrag
 
 instance (R2 ~ V a, Diagrammable a Cairo R2, Clickable a)
-      => Interactive (Draggable a) where
+      => GtkInteractive (Draggable a) where
   display = displayDiagram toDiagram
-  mouse = simpleMouse mouseDrag
 
 instance (Clickable a, AdditiveGroup (V a))
       => Clickable (Draggable a) where
-  clickInside d p = clickInside (_dragContent d) $ p ^-^ dragOffset d
+  clickInside d p = clickInside (_dragContent d) $ p ^-^ get dragOffset d
 
 -- | Creates dragging state for some object, with an initial offset.
 mkDraggable :: V a -> a -> Draggable a
@@ -101,13 +97,17 @@ updateDrag _ d = d
 -- | Switches out of dragging mode.
 endDrag :: (AdditiveGroup (V a)) 
         => Draggable a -> Draggable a
-endDrag d = Draggable Nothing (dragOffset d) $ _dragContent d
+endDrag d = Draggable Nothing (get dragOffset d) $ _dragContent d
 
--- | Queries whether we're currently in dragging-modk
+-- | Queries whether we're currently in dragging-mode.
 isDragging :: Draggable a -> Bool
 isDragging = isJust . get dragState
 
--- | Gets the current amount of drag-induced offset for the diagram.
+-- | Lens on the current amount of drag-induced offset for the diagram.
 dragOffset :: (AdditiveGroup (V a))
-           => Draggable a -> V a
-dragOffset (Draggable c o _) =  o ^+^ maybe zeroV (uncurry (^-^)) c
+           => Draggable a :-> V a
+dragOffset = lens getter setter
+ where
+  delta = maybe zeroV (uncurry (^-^))
+  getter   (Draggable c o _) = o ^+^ delta c
+  setter o' (Draggable c o x) = Draggable c (o' ^-^ delta c) x

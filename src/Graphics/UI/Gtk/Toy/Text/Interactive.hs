@@ -16,9 +16,12 @@ import System.IO.Unsafe
 cursorText :: (Mark m, CanBeCursor m) => MarkedText m
 cursorText = MarkedText "" [((0, 0), mkCursor)]
 
-instance (Eq m, Show m, Mark m, CanBeCursor m)
+instance (Eq m, Mark m, CanBeCursor m)
       => Interactive (MarkedText m) where
   keyboard = simpleKeyboard textKey
+
+instance (Eq m, Mark m, CanBeCursor m)
+      => GtkInteractive (MarkedText m) where
   display = displayDiagram 
           ( scaleY (-1) . (strutX 10 |||) . (strutY 18 |||) . monoText )
 
