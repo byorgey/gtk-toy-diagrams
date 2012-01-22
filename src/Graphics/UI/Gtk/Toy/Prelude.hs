@@ -16,7 +16,6 @@ module Graphics.UI.Gtk.Toy.Prelude
   , module Graphics.UI.Gtk.Toy.Draggable
   , module Graphics.UI.Gtk.Toy.Text
   , module Graphics.UI.Gtk.Toy.Text.Interactive
-  , module Graphics.UI.Gtk.Toy.Wrap
   ) where
 
 import Diagrams.Prelude
@@ -25,4 +24,3 @@ import Graphics.UI.Gtk.Toy.Diagrams
 import Graphics.UI.Gtk.Toy.Draggable
 import Graphics.UI.Gtk.Toy.Text
 import Graphics.UI.Gtk.Toy.Text.Interactive
-import Graphics.UI.Gtk.Toy.Wrap

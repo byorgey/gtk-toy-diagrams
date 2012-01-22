@@ -14,6 +14,7 @@ import Data.Label
 import Data.List (intersperse)
 import Diagrams.Prelude hiding (text)
 import Diagrams.Backend.Cairo
+import Diagrams.Layout.Wrap
 
 data State = State { _txt :: MarkedText CursorMark
                    , _bnds :: Draggable (Diagram Cairo R2) }
@@ -23,14 +24,15 @@ $(mkLabels [''State])
 main = runToy $ State cursorText (mkDraggable (50, 50) $ circle 100)
 
 instance Diagrammable State Cairo R2 where
-  toDiagram s = (r <> diaBnds) === hcat rest
+  toDiagram s = r <> diaBnds
    where
     diaBnds = toDiagram (get bnds s)
     axis = [unitX, negateV $ unitY]
-    (r, rest) = fillInside (getAny . sample diaBnds) axis (P (10, 10))
-              . intersperse (strutX 10)	
-              . map (alignTL . plainText) . words
-              $ get (mText . txt) s
+    r = wrapDiagram
+      . wrapInside (getAny . sample diaBnds) axis (P (10, 10))
+      . intersperse (strutX 10)	
+      . map (alignTL . plainText) . words
+      $ get (mText . txt) s
 
 plainText = monoText . (`MarkedText` ([] :: [(Ivl, CursorMark)]))
 

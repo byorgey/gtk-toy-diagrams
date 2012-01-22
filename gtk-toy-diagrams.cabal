@@ -24,7 +24,7 @@ Library
                      gtk,
                      gtk-toy,
                      newtype,
-                     newtype-th
+                     newtype-th >= 0.3
   Hs-source-dirs:    src
   Exposed-Modules:
     Graphics.UI.Gtk.Toy.Diagrams
@@ -35,7 +35,6 @@ Library
     Graphics.UI.Gtk.Toy.Text
     Graphics.UI.Gtk.Toy.Text.Interactive
     Graphics.UI.Gtk.Toy.Transformed
-    Graphics.UI.Gtk.Toy.Wrap
 
 executable text
   Main-Is:           src/Text.hs

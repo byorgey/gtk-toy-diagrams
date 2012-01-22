@@ -35,10 +35,7 @@ import Diagrams.Prelude
 newtype Transformed a = Transformed [(Transformation (V a), a)]
   deriving (Monoid)
 
-instance (s ~ V a) => Newtype (Transformed a) [(Transformation s, a)] where
-  { unpack (Transformed x) = x; pack = Transformed }
-
--- $(mkNewTypes [''Transformed])
+$(mkNewTypes [''Transformed])
 
 type instance V (Transformed a) = V a
 
