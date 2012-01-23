@@ -86,7 +86,7 @@ $(mkNewTypes [''TToy, ''TDia])
 -- | Convenience function for implementing the display function of
 --   Interactive.
 displayDiagram :: (a -> CairoDiagram)
-                -> G.DrawWindow -> InputState -> a -> IO a
+               -> G.DrawWindow -> InputState -> a -> IO a
 displayDiagram f dw _ x = (renderToGtk dw $ f x) >> return x
 
 -- Traversable Toy instances
