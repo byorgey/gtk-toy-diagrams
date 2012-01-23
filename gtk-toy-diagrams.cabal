@@ -35,6 +35,7 @@ Library
     Graphics.UI.Gtk.Toy.Text
     Graphics.UI.Gtk.Toy.Text.Interactive
     Graphics.UI.Gtk.Toy.Transformed
+    Graphics.UI.Gtk.Toy.Utils
 
 executable text
   Main-Is:           src/Text.hs
@@ -81,6 +82,21 @@ executable wrap
 
 executable forceLayout
   Main-Is:           src/ForceLayout.hs
+  Build-Depends:     base,
+                     containers,
+                     colour,
+                     diagrams-lib,
+                     diagrams-cairo,
+                     diagrams-contrib,
+                     fclabels,
+                     force-layout,
+                     gtk-toy,
+                     gtk-toy-diagrams,
+                     newtype,
+                     newtype-th
+
+executable transformed
+  Main-Is:           src/Transformed.hs
   Build-Depends:     base,
                      containers,
                      colour,

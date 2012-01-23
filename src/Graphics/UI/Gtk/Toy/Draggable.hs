@@ -36,6 +36,8 @@ module Graphics.UI.Gtk.Toy.Draggable
 import Graphics.UI.Gtk.Toy
 import Graphics.UI.Gtk.Toy.Diagrams
 
+import Control.Newtype (Newtype, pack, unpack, over, overF)
+
 import Data.Label
 import Data.Maybe (isJust)
 
@@ -56,31 +58,36 @@ type instance V (Draggable a) = V a
 $(mkLabels [''Draggable])
 
 instance ( v ~ V a, HasLinearMap v, InnerSpace v, OrderedField (Scalar v)
-         , Diagrammable a Cairo v)
+         , Diagrammable a Cairo v )
       => Diagrammable (Draggable a) Cairo v where
   toDiagram d@(Draggable _ _ a)
     = translate (get dragOffset d) $ toDiagram a
 
-instance (R2 ~ V a, Clickable a)
+instance ( R2 ~ V a, Clickable a )
       => Interactive (Draggable a) where
   mouse = simpleMouse mouseDrag
 
-instance (R2 ~ V a, Diagrammable a Cairo R2, Clickable a)
+instance ( R2 ~ V a, Diagrammable a Cairo R2, Clickable a )
       => GtkInteractive (Draggable a) where
   display = displayDiagram toDiagram
 
-instance (Clickable a, AdditiveGroup (V a))
+instance ( Clickable a, AdditiveGroup (V a) )
       => Clickable (Draggable a) where
-  clickInside d p = clickInside (_dragContent d) $ p ^-^ get dragOffset d
+  clickInside d p = clickInside (_dragContent d) $ p .-^ get dragOffset d
+
+instance ( Boundable a, HasLinearMap (V a))
+      => Boundable (Draggable a) where
+  getBounds d = translate (get dragOffset d) 
+              . getBounds $ get dragContent d
 
 -- | Creates dragging state for some object, with an initial offset.
 mkDraggable :: V a -> a -> Draggable a
 mkDraggable = Draggable Nothing
 
 -- | Pure mouse handler, compatible with the type expected by "simpleMouse".
-mouseDrag (Just (True,  0)) p d | clickInside d p = startDrag p d
-mouseDrag Nothing           p d                   = updateDrag p d
-mouseDrag (Just (False, 0)) p d                   = endDrag d
+mouseDrag (Just (True,  0)) p d | clickInside d (P p) = startDrag p d
+mouseDrag Nothing           p d                       = updateDrag p d
+mouseDrag (Just (False, 0)) p d                       = endDrag d
 mouseDrag _ _ d = d
 
 -- | Switches into dragging mode at the given position.

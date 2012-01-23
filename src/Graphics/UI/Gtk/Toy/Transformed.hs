@@ -2,9 +2,13 @@
            , FlexibleInstances
            , GeneralizedNewtypeDeriving
            , MultiParamTypeClasses
+           , RankNTypes
            , TemplateHaskell
+           , TupleSections
            , TypeFamilies
            , UndecidableInstances
+           , ImpredicativeTypes
+           , ScopedTypeVariables
   #-}
 -----------------------------------------------------------------------------
 -- |
@@ -19,69 +23,95 @@
 -----------------------------------------------------------------------------
 
 module Graphics.UI.Gtk.Toy.Transformed
-  ( Transformed(..) ) where
+  ( Transformed(..), mkTransformed ) where
 
 import Graphics.UI.Gtk.Toy
 import Graphics.UI.Gtk.Toy.Diagrams
+import Graphics.UI.Gtk.Toy.Utils
 
 import Control.Arrow (first, second)
-import Control.Newtype (Newtype, pack, unpack, over)
+import Control.Newtype (Newtype, pack, unpack, under, over, overF)
 import Control.Newtype.TH
-import Data.Foldable (foldMap)
+import Data.Foldable (fold, foldMap)
 import Data.Label
 import Diagrams.Backend.Cairo
-import Diagrams.Prelude
+import Diagrams.Prelude hiding (under)
+import Graphics.Rendering.Diagrams.Points
+import Debug.Trace
 
 newtype Transformed a = Transformed [(Transformation (V a), a)]
-  deriving (Monoid)
+  deriving (Monoid, Semigroup)
+
+{-
+data TThing 
+  = TThing
+  ( forall a. ( R2 ~ V a, GtkInteractive a
+              , Boundable a, Juxtaposable a
+              ) => a )
+
+-- | Existential wrapper for GtkInteractive, layout-able stuff
+type ToyThing = Transformed TThing
+-}
 
 $(mkNewTypes [''Transformed])
+
+mkTransformed :: HasLinearMap (V a) => a -> Transformed a
+mkTransformed = Transformed . (:[]) . (mempty, )
 
 type instance V (Transformed a) = V a
 
 type instance V InputState = R2
 instance Transformable InputState where
-  transform t is = is { mousePos = transform t $ mousePos is }
+--  transform t is = is { mousePos = trace (show $ transl $ inv t) $ debug $ transform t $ mousePos is }
+  transform t is = is { mousePos = under P (transform $ inv t) $ mousePos is }
 
-instance HasLinearMap (V a)
-      => HasOrigin      (Transformed a) where
+instance HasLinearMap (V a) => HasOrigin     (Transformed a) where
   moveOriginTo p = translate (origin .-. p)
   
-instance HasLinearMap (V a) 
-      => Transformable  (Transformed a) where
+instance HasLinearMap (V a) => Transformable (Transformed a) where
   transform a = Transformed `over` map (first (a <>))
 
-instance ( HasLinearMap (V a) 
-         , Boundable                   a)
-        => Boundable      (Transformed a) where
+instance ( Boundable a, HasLinearMap (V a) )
+      => Boundable (Transformed a) where
   getBounds = foldMap (\(t, x) -> transform t $ getBounds x) . unpack
 
-instance HasStyle                    a
-      => HasStyle       (Transformed a) where
+instance HasStyle a => HasStyle (Transformed a) where
   applyStyle s = Transformed `over` map (second $ applyStyle s)
-
-{-
-instance Interactive                 a
-      => Interactive    (Transformed a) where
-  tick       i (Transformed t xs) 
-             = (Transformed t `first`) <$> mapM (tick       (transform t i)) xs
-  mouse    m i (Transformed t xs) 
-             = (Transformed t  )       <$> mapM (mouse m    (transform t i)) xs
-  keyboard k i (Transformed t xs) 
-             = (Transformed t  )       <$> mapM (keyboard k (transform t i)) xs
-
-instance ( Diagrammable a Cairo R2, Interactive a )
-      => GtkInteractive (Transformed a) where
-  display dw i (Transformed t x)
-    = Transformed t <$> displayDiagram (mapM toDiagram) dw (transform t i) x
 
 instance ( v ~ V a, HasLinearMap v, InnerSpace v, OrderedField (Scalar v)
          , Diagrammable a Cairo v)
-        => Diagrammable   (Transformed a) Cairo v where
-  toDiagram (Transformed t x) = transform t $ foldMap toDiagram x
+        => Diagrammable (Transformed a) Cairo v where
+  toDiagram = foldMap (\(t, x) -> transform t $ toDiagram x) . unpack
 
-instance ( Clickable a, AdditiveGroup (V a) )
-        => Clickable    (Transformed a) where
-  clickInside (Transformed t x) p = clickInside x $ transform t p
+instance ( Boundable a, HasLinearMap (V a) )
+      => Juxtaposable (Transformed a) where
+  juxtapose = juxtaposeDefault
 
+overInpT f i = Transformed `overM` mapM (\(t, x) -> (t,) <$> f (transform t i) x)
+
+instance ( Interactive a, V a ~ R2 )
+      => Interactive (Transformed a) where
+  -- TODO: or together the boolean results
+  tick     i = liftA (, True)
+             . overInpT (\i' -> liftA fst . tick i') i
+  mouse    m = overInpT (mouse m)
+  keyboard k = overInpT (keyboard k)
+
+instance ( Interactive a, Diagrammable a Cairo R2, V a ~ R2 )
+      => GtkInteractive (Transformed a) where
+  display dw i = displayDiagram toDiagram dw i
+
+instance ( Clickable a, HasLinearMap (V a) )
+        => Clickable (Transformed a) where
+  clickInside d p = any (\(t, x) -> clickInside x $ transform t p) $ unpack d
+
+{-
+instance Interactive TThing where
+  tick       i = liftA (, True)
+               $ TThing `overM` (liftA fst . tick i)
+  mouse    m i = TThing `overM` mouse m i
+  keyboard k i = TThing `overM` keyboard k i
+
+instance GtkInteractive TThing where
+  display = display
 -}
