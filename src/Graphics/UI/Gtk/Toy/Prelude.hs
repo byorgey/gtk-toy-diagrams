@@ -18,8 +18,10 @@ module Graphics.UI.Gtk.Toy.Prelude
   , module Graphics.UI.Gtk.Toy.Text
   , module Graphics.UI.Gtk.Toy.Text.Interactive
   , module Graphics.UI.Gtk.Toy.Transformed
+  , Cairo
   ) where
 
+import Diagrams.Backend.Cairo (Cairo)
 import Diagrams.Prelude
 import Graphics.UI.Gtk.Toy
 import Graphics.UI.Gtk.Toy.Diagrams

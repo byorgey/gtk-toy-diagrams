@@ -23,8 +23,9 @@ instance GtkInteractive State where
           $ \(State _ hm) -> (mconcat . map toDiagram $ M.elems hm)
 
 updateHandles :: State -> State
-updateHandles (State e hm) = State (modify particles (M.intersectionWith constrain hm) e)
-                                   (M.intersectionWith update hm (get particles e))
+updateHandles (State e hm) 
+  = State (modify particles (M.intersectionWith constrain hm) e)
+          (M.intersectionWith update hm (get particles e))
  where
 -- Move particle to its handle if dragged.
   constrain d p 
@@ -37,7 +38,8 @@ updateHandles (State e hm) = State (modify particles (M.intersectionWith constra
 
 main = runToy 
      $ State e
-     $ M.fromList $ [(k, mkDraggable p $ circle 5) | (k, get pos -> P p) <- M.toList particleMap]
+     $ M.fromList $ [(k, mkDraggable p $ circle 5) | (k, get pos -> P p) 
+                     <- M.toList particleMap]
  where
   e = Ensemble [ (edges,    hookeForce 1 4)
                , (allPairs, coulombForce 1)

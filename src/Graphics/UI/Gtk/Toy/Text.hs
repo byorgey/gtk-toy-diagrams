@@ -31,7 +31,7 @@ import Data.Colour.Names (black, white)
 import Data.Either (partitionEithers)
 import Data.Label
 import Data.List (partition, findIndices, sortBy, sort, delete, group, (\\))
-import Data.Maybe (fromJust, catMaybes, maybeToList)
+import Data.Maybe (catMaybes, mapMaybe)
 import Data.Ord (comparing)
 
 import Debug.Trace (trace)
@@ -68,16 +68,22 @@ emptyText = MarkedText "" []
 -- | Extract an interval of the text.  First parameter is True if inclusive.
 substrText :: Bool -> MarkedText m -> Ivl -> MarkedText m
 substrText inc (MarkedText str ms) ivl@(f, t)
-  = MarkedText (take (t - max 0 f) $ drop f str)
+  = MarkedText (take count $ drop f' str)
   . catMaybes $ map (firstA $ local) ms
  where
+  f' = max 0 f
+  count = t - f'
 -- Transform intervals into the result, yielding Nothing if they aren't
 -- inside the substring interval.
-  local x | x == ivl = Just (0, t - f)
+  local x | x == ivl = Just (0, count)
           | inc && fst x ==  0 && fst ivl ==  0 = Just (0, min (snd x) (snd ivl))
           | inc && snd x == tl && snd ivl == tl = Just (max (fst x) (fst ivl), tl)
-          | otherwise = mapT (subtract f) <$> ivlIntersect ivl x
+          | otherwise = mapT (subtract f') <$> ivlIntersect ivl x
   tl = length str
+
+-- Sort marks, big first.
+sortMarks :: [(Ivl, m)] -> [(Ivl, m)]
+sortMarks = sortBy (comparing (\((f, t), _) -> (f, f - t)))
 
 -- | Concatenates two marked texts together, attempting to merge the marks
 --   incident on the join.
@@ -89,13 +95,13 @@ addText (MarkedText at ams) (MarkedText bt bms)
   al = length at
 
 -- Separate off marks that cross the border between the texts.
-  (ap, an) = partition ((>=al-1) . snd . fst) ams
+  (ap, an) = partition ((>=al - 1) . snd . fst) ams
 
   (bp, bn) = mapT (map $ first $ mapT (+al))
            $ partition ((<=0)  . fst . fst) bms
 
 -- Collect all of the resulting marks.
-  rms = sortBy (comparing fst) $ an ++ performMerges ap bp ++ bn
+  rms = sortMarks $ an ++ performMerges ap bp ++ bn
 
 -- Merge overlapping marks from the two texts.
 performMerges []     ys = ys
@@ -167,7 +173,7 @@ drawText style mt
   chunk l1 l2 (_, MarkedText t ms) = foldr ((`drawMark` t) . snd) (text l1 l2 t) ms
   text (_, MarkedText s1 _) (_, MarkedText s2 _) t
     = --strutX (kerningCorrection style (last $ s1 ++ s2) $ head t) |||
-      textLineBounded style t
+      textLineBounded style (filter (not . (`elem` "\r\n")) t)
   window3 f (x:y:z:xs) = f x y z : window3 f (y:z:xs)
   window3 f _ = []
 
@@ -225,18 +231,30 @@ mutateSlice f i mt = applyEdit (i, f $ substrText True mt i) mt
 -- | Applies a mark to the given interval.
 addMark :: (Eq m, Mark m)
         => (Ivl, m) -> MarkedText m -> MarkedText m
+addMark m (MarkedText txt ms) = MarkedText txt $ m : ms
+{- TODO: fix
 addMark (ivl, m) = mutateSlice 
   (\(MarkedText txt ms) -> MarkedText txt $ (ivl, m) : ms) ivl
+-}
+
+addMarks ms t = foldr addMark t ms
 
 -- | Removes marks that match the given predicate.
 removeMark :: ((Ivl, m) -> Bool) -> MarkedText m -> MarkedText m
 removeMark f (MarkedText txt xs) = MarkedText txt $ filter (not . f) xs
 
 mutateMarks :: (Eq m, Mark m)
-               => ((Ivl, m) -> Maybe (Ivl, m)) -> MarkedText m -> MarkedText m
+            => ((Ivl, m) -> Maybe (Ivl, m)) -> MarkedText m -> MarkedText m
+mutateMarks f (MarkedText t ms) = MarkedText t $ mapMaybe f ms
+{- Old defn - Nothing indicates noop)
 mutateMarks f (MarkedText t ms) = MarkedText t $ ms' ++ (ms \\ del)
  where
   (del, ms') = unzip . catMaybes $ map (raiseSndA . (id &&& f)) ms
+-}
+
+filterMarks :: (Eq m, Mark m)
+            => ((Ivl, m) -> Bool) -> MarkedText m -> MarkedText m
+filterMarks f = mutateMarks (\m -> if f m then Just m else Nothing)
 
 moveCursor f (i, x) 
   | isCursor x = (f i, x)
@@ -252,6 +270,9 @@ clipMarks mt = modify mMarks (uncurry performMerges . partitionEithers . map pro
     | f < 0 || t < 0 || f > l || t > l = Left ((wrap f, wrap t), m)
     | otherwise = Right ((f, t), m)
   wrap = max 0 . min (textLength mt)
+
+clearMarks :: MarkedText m -> MarkedText m
+clearMarks (MarkedText t _) = MarkedText t []
 
 -- Builtin Marks
 

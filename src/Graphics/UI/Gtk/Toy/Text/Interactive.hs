@@ -18,25 +18,25 @@ cursorText = MarkedText "" [((0, 0), mkCursor)]
 
 instance (Eq m, Mark m, CanBeCursor m)
       => Interactive (MarkedText m) where
-  keyboard = simpleKeyboard textKey
+  keyboard = simpleKeyboard textKeyHandler
 
 instance (Eq m, Mark m, CanBeCursor m)
       => GtkInteractive (MarkedText m) where
-  display = displayDiagram 
-          ( scaleY (-1) . (strutX 10 |||) . (strutY 18 |||) . monoText )
+  display = displayDiagram
+          ( scaleY (-1) . (strutX 10 |||) . (strutY 18 |||) . alignT . monoText )
 
 monoText :: Mark m => MarkedText m -> CairoDiagram
 monoText = drawText (font "monospace" . fontSize 18)
 
-textKey ::(Eq m, Mark m, CanBeCursor m)
-          => KeyEvent -> MarkedText m -> MarkedText m 
-textKey (True, e) mt = case e of
+textKeyHandler :: (Eq m, Mark m, CanBeCursor m)
+              => KeyEvent -> MarkedText m -> MarkedText m 
+textKeyHandler (True, e) mt = case e of
   Right k -> insert [k]
   Left  k -> case k of
     "Return"    -> insert "\n"
     "Left"      -> mutateCursors (subtract 1)
     "Right"     -> mutateCursors (+1)
-    "Home"      -> mutateCursors (const (-1, -1))
+    "Home"      -> mutateCursors (const (-maxIx, -maxIx))
     "End"       -> mutateCursors (const (maxIx, maxIx))
     "Delete"    -> editCursors (\(ivl, _) -> (second  (+1)  ivl, cursorText))
     "BackSpace" -> editCursors (\(ivl, _) -> (first (+(-1)) ivl, cursorText))
@@ -49,10 +49,10 @@ textKey (True, e) mt = case e of
     where p = length s
 
   mutateCursors f = clipMarks . editCursors . second . mutateMarks
-                  $ \m -> first f <$> toMaybe (isCursor . snd) m
+                  $ \m -> if isCursor $ snd m then Just $ first f m else Just m
 
   toMaybe f x = if f x then Just x else Nothing
 
   maxIx = textLength mt
 
-textKey _ ts = ts
+textKeyHandler _ ts = ts

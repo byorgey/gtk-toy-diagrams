@@ -37,7 +37,7 @@ instance Diagrammable State Cairo R2 where
 plainText = monoText . (`MarkedText` ([] :: [(Ivl, CursorMark)]))
 
 instance Interactive State where
-  keyboard = simpleKeyboard (\k -> modify txt (textKey k))
+  keyboard = simpleKeyboard (\k -> modify txt (textKeyHandler k))
   mouse m i = modF bnds (mouse m $ flipMouse i)
 
 instance GtkInteractive State where
