@@ -16,12 +16,14 @@ import Diagrams.Prelude hiding (text)
 import Diagrams.Backend.Cairo
 import Diagrams.Layout.Wrap
 
-data State = State { _txt :: MarkedText CursorMark
+type MTC = MarkedText CursorMark
+
+data State = State { _txt :: MTC
                    , _bnds :: Draggable (Diagram Cairo R2) }
 
 $(mkLabels [''State])
 
-main = runToy $ State cursorText (mkDraggable (50, 50) $ circle 100)
+main = runToy $ State (addText cursorText (plainText "this is a series of words.") :: MTC) (mkDraggable (50, 50) $ circle 100)
 
 instance Diagrammable State Cairo R2 where
   toDiagram s = r <> diaBnds
@@ -31,10 +33,8 @@ instance Diagrammable State Cairo R2 where
     r = wrapDiagram
       . wrapInside (getAny . sample diaBnds) axis (P (10, 10))
       . intersperse (strutX 10)	
-      . map (alignTL . plainText) . words
+      . map (alignTL . monoText . (plainText :: String -> MTC)) . words
       $ get (mText . txt) s
-
-plainText = monoText . (`MarkedText` ([] :: [(Ivl, CursorMark)]))
 
 instance Interactive State where
   keyboard = simpleKeyboard (\k -> modify txt (textKeyHandler k))

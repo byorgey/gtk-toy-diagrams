@@ -65,6 +65,9 @@ class Mark a where
 emptyText :: MarkedText m
 emptyText = MarkedText "" []
 
+plainText :: String -> MarkedText m
+plainText t  = MarkedText t []
+
 -- | Extract an interval of the text.  First parameter is True if inclusive.
 substrText :: Bool -> MarkedText m -> Ivl -> MarkedText m
 substrText inc (MarkedText str ms) ivl@(f, t)
