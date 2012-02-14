@@ -1,7 +1,10 @@
 {-# LANGUAGE RankNTypes
-           , ScopedTypeVariables
+           , FlexibleInstances
+           , MultiParamTypeClasses
            , TemplateHaskell
            , TupleSections
+           , TypeFamilies
+           , TypeSynonymInstances
   #-}
 -----------------------------------------------------------------------------
 -- |
@@ -45,6 +48,8 @@ data MarkedText m = MarkedText
 
 $(mkLabels [''MarkedText])
 
+newtype StyleState = StyleState StyleParam
+
 class CanBeCursor a where
   mkCursor :: a
   isCursor :: a -> Bool
@@ -54,13 +59,20 @@ class CanBeCursor a where
 -- TODO: rename all m type variables to something else..
 
 class Mark a where
-  -- TODO: use
-  styleMark :: a -> StyleParam
-  drawMark :: a -> String -> CairoDiagram -> CairoDiagram
+  type DrawState a
+  initialDrawState :: MarkedText a -> DrawState a
+
+  drawStateStyle :: MarkedText a -> DrawState a -> StyleParam
+  drawStateStyle _ _ = monoStyle
+
+  drawMark :: a -> DrawState a -> MarkedText a -> CairoDiagram
+  drawMark _ s m = drawRec s m
+
   mergeMark :: a -> a -> Maybe a
-  styleMark _ = id
-  drawMark _ _ = id
   mergeMark _ _ = Nothing
+
+monoStyle :: StyleParam
+monoStyle = font "monospace" . fontSize 18
 
 emptyText :: MarkedText m
 emptyText = MarkedText "" []
@@ -120,65 +132,26 @@ performMerges (x:xs) ys = case msum . map doMerge $ ys of
 --TODO: consider a mark for lines / line #s?
 --TODO: figure out how style will be applied to the text by marks
 
--- | Draws the marked text, given an initial style to apply.
-{-
-drawText :: (Show a, Mark a) => StyleParma -> MarkedText a -> CairoDiagram
-drawText style mt =
-  . 
-  . map (drawLine . (substrText True mt) . (second (+1)))
-  . ivlsFromSlices (textLength mt)
-  . findIndices (=='\n')
-  $ _text mt
- where
-  drawLine l = map (hcat
-             . mergeCompatible containment
-             . map (, [])
-             . sortBy (comparing $ uncurry (-) . fst)
-             $ _marks l
-  
-  text (_, MarkedText s1 _) (_, MarkedText s2 _) t
-    = --strutX (kerningCorrection style (last $ s1 ++ s2) $ head t) |||
-      textLineBounded style t
-  containment ((i1, m1), xs) (x@(i2, m2), ys)
-    | i1 `ivlContainsIvl` i2 = Just ((i1, m1), ys ++ x:xs)
-    | otherwise = Nothing
+drawText' :: Mark m => MarkedText m -> CairoDiagram
+drawText' mt = drawText (initialDrawState mt) mt
 
-
--- List utility used in drawText
-
-mergeCompatible _ [] = []
-mergeCompatible _ [x] = [x]
-mergeCompatible f (x:xs)
-  = case extractJust (f x) xs of
-      Just (r, rs) -> mergeCompatible f (r:rs)
-      Nothing -> x : mergeCompatible f xs
-
--- Removes the first element that yields a "Just".
-extractJust :: (a -> Maybe b) -> [a] -> Maybe (b, [a])
-extractJust f [] = Nothing
-extractJust f (x:xs) = case f x of
-  Just y  -> Just (y, xs)
-  Nothing -> second (x:) <$> extractJust f xs
--}
-
--- | Draws the marked text, given a style to apply by default to the unmarked text.
-drawText :: (Mark a) => StyleParam -> MarkedText a -> CairoDiagram
-drawText style mt
+drawText :: Mark m => DrawState m -> MarkedText m -> CairoDiagram
+drawText initial mt
   = vcat
-  . map (hcat . window3 chunk . dummyPad)
-  . map (textChunks . (substrText True mt) . (second (+1)))
+  . map (drawRec initial . substrText True sorted . second (+1))
   . ivlsFromSlices (textLength mt)
   . findIndices (=='\n')
   $ get mText mt
  where
-  dummyPad = (replicate 2 ((0,0), emptyText) ++)
---TODO: sweepline-style context accumulation would be more efficient.
-  chunk l1 l2 (_, MarkedText t ms) = foldr ((`drawMark` t) . snd) (text l1 l2 t) ms
-  text (_, MarkedText s1 _) (_, MarkedText s2 _) t
-    = --strutX (kerningCorrection style (last $ s1 ++ s2) $ head t) |||
-      textLineBounded style (filter (not . (`elem` "\r\n")) t)
-  window3 f (x:y:z:xs) = f x y z : window3 f (y:z:xs)
-  window3 f _ = []
+  sorted = modify mMarks sortMarks mt
+
+drawRec :: forall m. Mark m => DrawState m -> MarkedText m -> CairoDiagram
+drawRec st mt@(MarkedText txt [])
+  = textLineBounded (drawStateStyle mt st) $ filter (not . (`elem` "\r\n")) txt
+drawRec st mt@(MarkedText txt (((fm, tm), m):xs))
+  =   drawRec st (substrText False mt (-1, fm))
+  ||| drawMark m st (substrText True mt (fm, tm))
+  ||| drawRec st (substrText False mt (tm, length txt + 1))
 
 -- | A chunk specifies a located marked text.
 type Chunk m = (Ivl, MarkedText m)
@@ -279,6 +252,15 @@ clearMarks (MarkedText t _) = MarkedText t []
 
 -- Builtin Marks
 
+data EmptyMark = EmptyMark deriving (Eq, Show)
+
+instance Mark EmptyMark where
+  type DrawState EmptyMark = ()
+  initialDrawState _ = ()
+  drawStateStyle _ _ = monoStyle
+  drawMark m _ mt = drawRec () mt
+  mergeMark _ _ = Just EmptyMark
+
 data CursorMark = CursorMark deriving (Eq, Show)
 
 instance CanBeCursor CursorMark where
@@ -286,13 +268,16 @@ instance CanBeCursor CursorMark where
   isCursor = const True
 
 instance Mark CursorMark where
-  drawMark _ str td
-    | null str = lineWidth 1 . lineColor black
+  type DrawState CursorMark = StyleState
+  initialDrawState _ = StyleState monoStyle
+  drawStateStyle _ (StyleState s) = s
+  drawMark m (StyleState s) mt@(MarkedText txt _)
+    | null txt = lineWidth 1 . lineColor black
                . moveOriginBy (-1.5, 2)
                . setBounds mempty
                . stroke . pathFromTrail
                $ Trail [Linear (0, 18)] False
-    | otherwise = td # fc white # highlight black
+    | otherwise = highlight black $ drawRec (StyleState $ s . fc white) mt 
   mergeMark _ _ = Just CursorMark
 
 highlight c d = setBounds (getBounds d)
@@ -303,15 +288,27 @@ highlight c d = setBounds (getBounds d)
 
 data SizeMark = SizeMark Double
 instance Mark SizeMark where
-  drawMark (SizeMark size) _ = fontSize size
+  type DrawState SizeMark = StyleState
+  initialDrawState _ = StyleState monoStyle
+  drawStateStyle _ (StyleState s) = s
+  drawMark (SizeMark size) (StyleState s) mt
+    = drawRec (StyleState $ fontSize size . s) mt
   
 data SlantMark = SlantMark FontSlant
 instance Mark SlantMark where
-  drawMark (SlantMark slant) _ = fontSlant slant
+  type DrawState SlantMark = StyleState
+  initialDrawState _ = StyleState monoStyle
+  drawStateStyle _ (StyleState s) = s
+  drawMark (SlantMark slant) (StyleState s) mt
+    = drawRec (StyleState $ fontSlant slant . s) mt
 
 data WeightMark = WeightMark FontWeight
 instance Mark WeightMark where
-  drawMark (WeightMark weight) _ = fontWeight weight
+  type DrawState WeightMark = StyleState
+  initialDrawState _ = StyleState monoStyle
+  drawStateStyle _ (StyleState s) = s
+  drawMark (WeightMark weight) (StyleState s) mt
+    = drawRec (StyleState $ fontWeight weight . s) mt
 
 -- Utils
 

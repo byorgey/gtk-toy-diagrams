@@ -23,7 +23,8 @@ data State = State { _txt :: MTC
 
 $(mkLabels [''State])
 
-main = runToy $ State (addText cursorText (plainText "this is a series of words.") :: MTC) (mkDraggable (50, 50) $ circle 100)
+main = runToy $ State (addText cursorText (plainText "this is a series of words.") :: MTC) 
+                      (mkDraggable (50, 50) $ circle 100)
 
 instance Diagrammable State Cairo R2 where
   toDiagram s = r <> diaBnds
@@ -33,7 +34,7 @@ instance Diagrammable State Cairo R2 where
     r = wrapDiagram
       . wrapInside (getAny . sample diaBnds) axis (P (10, 10))
       . intersperse (strutX 10)	
-      . map (alignTL . monoText . (plainText :: String -> MTC)) . words
+      . map (alignTL . drawText' . (plainText :: String -> MTC)) . words
       $ get (mText . txt) s
 
 instance Interactive State where

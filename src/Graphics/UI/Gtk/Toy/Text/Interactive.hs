@@ -23,13 +23,13 @@ instance (Eq m, Mark m, CanBeCursor m)
 instance (Eq m, Mark m, CanBeCursor m)
       => GtkInteractive (MarkedText m) where
   display = displayDiagram
-          ( scaleY (-1) . (strutX 10 |||) . (strutY 18 |||) . alignT . monoText )
-
-monoText :: Mark m => MarkedText m -> CairoDiagram
-monoText = drawText (font "monospace" . fontSize 18)
+          $ \mt -> scaleY (-1)
+                 $ strutY 18
+                   ===
+                  ( strutX 10 ||| alignT (drawText' mt) )
 
 textKeyHandler :: (Eq m, Mark m, CanBeCursor m)
-              => KeyEvent -> MarkedText m -> MarkedText m 
+               => KeyEvent -> MarkedText m -> MarkedText m
 textKeyHandler (True, e) mt = case e of
   Right k -> insert [k]
   Left  k -> case k of
@@ -48,8 +48,9 @@ textKeyHandler (True, e) mt = case e of
   insert s = editCursors $ second $ const (MarkedText s [((p, p), mkCursor)])
     where p = length s
 
-  mutateCursors f = clipMarks . editCursors . second . mutateMarks
-                  $ \m -> if isCursor $ snd m then Just $ first f m else Just m
+  mutateCursors f = mutateMarks
+                    ( \(i, m) -> if isCursor m then Just (f i, m) else Just (i, m) )
+                    mt
 
   toMaybe f x = if f x then Just x else Nothing
 
