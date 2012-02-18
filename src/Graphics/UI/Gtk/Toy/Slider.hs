@@ -70,9 +70,9 @@ instance (Renderable (Path R2) Cairo)
   toDiagram s = stroke (fromOffsets [get sliderLine s])
               <> toDiagram (get sliderHandle s)
 
-instance Boundable (Slider a) where
-  getBounds s = getBounds [origin, P $ get sliderLine s]
-             <> getBounds (get sliderHandle s)
+instance Enveloped (Slider a) where
+  getEnvelope s = getEnvelope [origin, P $ get sliderLine s]
+               <> getEnvelope (get sliderHandle s)
 
 mkSlider ivl d = Slider (ivlBij ivl) (mkDraggable (0, 0) d)
  where

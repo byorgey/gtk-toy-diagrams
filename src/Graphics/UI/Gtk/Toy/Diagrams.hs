@@ -71,8 +71,8 @@ type instance V (TToy t a) = V a
 type instance V (TDia a)   = V a
 
 deriving instance ( InnerSpace (V a), HasLinearMap (V a), OrderedField (Scalar (V a))
-                  , Boundable a)
-                 => Boundable     (TDia a)
+                  , Enveloped a)
+                 => Enveloped     (TDia a)
 deriving instance ( Transformable a, HasLinearMap (V a))
                  => Transformable (TDia a)
 deriving instance ( HasOrigin a, VectorSpace (V a) )

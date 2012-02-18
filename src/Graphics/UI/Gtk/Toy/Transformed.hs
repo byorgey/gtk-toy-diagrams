@@ -46,7 +46,7 @@ newtype Transformed a = Transformed [(Transformation (V a), a)]
 data TThing 
   = TThing
   ( forall a. ( R2 ~ V a, GtkInteractive a
-              , Boundable a, Juxtaposable a
+              , Enveloped a, Juxtaposable a
               ) => a )
 
 -- | Existential wrapper for GtkInteractive, layout-able stuff
@@ -71,9 +71,9 @@ instance HasLinearMap (V a) => HasOrigin     (Transformed a) where
 instance HasLinearMap (V a) => Transformable (Transformed a) where
   transform a = Transformed `over` map (first (a <>))
 
-instance ( Boundable a, HasLinearMap (V a) )
-      => Boundable (Transformed a) where
-  getBounds = foldMap (\(t, x) -> transform t $ getBounds x) . unpack
+instance ( Enveloped a, HasLinearMap (V a) )
+      => Enveloped (Transformed a) where
+  getEnvelope = foldMap (\(t, x) -> transform t $ getEnvelope x) . unpack
 
 instance HasStyle a => HasStyle (Transformed a) where
   applyStyle s = Transformed `over` map (second $ applyStyle s)
@@ -83,7 +83,7 @@ instance ( v ~ V a, HasLinearMap v, InnerSpace v, OrderedField (Scalar v)
         => Diagrammable (Transformed a) Cairo v where
   toDiagram = foldMap (\(t, x) -> transform t $ toDiagram x) . unpack
 
-instance ( Boundable a, HasLinearMap (V a) )
+instance ( Enveloped a, HasLinearMap (V a) )
       => Juxtaposable (Transformed a) where
   juxtapose = juxtaposeDefault
 

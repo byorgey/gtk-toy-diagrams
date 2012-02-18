@@ -75,10 +75,10 @@ instance ( Clickable a, AdditiveGroup (V a) )
       => Clickable (Draggable a) where
   clickInside d p = clickInside (_dragContent d) $ p .-^ get dragOffset d
 
-instance ( Boundable a, HasLinearMap (V a))
-      => Boundable (Draggable a) where
-  getBounds d = translate (get dragOffset d) 
-              . getBounds $ get dragContent d
+instance ( Enveloped a, HasLinearMap (V a))
+      => Enveloped (Draggable a) where
+  getEnvelope d = translate (get dragOffset d) 
+                . getEnvelope $ get dragContent d
 
 -- | Creates dragging state for some object, with an initial offset.
 mkDraggable :: V a -> a -> Draggable a

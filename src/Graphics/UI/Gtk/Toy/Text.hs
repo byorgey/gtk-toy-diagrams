@@ -236,7 +236,7 @@ moveCursor f (i, x)
   | isCursor x = (f i, x)
   | otherwise = (i, x)
 
--- | Crops and merge marks that extend beyond the bounds of the MarkedText.
+-- | Crops and merge marks that extend beyond the envelope of the MarkedText.
 --TODO: merge behaviour
 clipMarks :: (Eq m, Mark m) => MarkedText m -> MarkedText m
 clipMarks mt = modify mMarks (uncurry performMerges . partitionEithers . map process) mt
@@ -274,13 +274,13 @@ instance Mark CursorMark where
   drawMark m (StyleState s) mt@(MarkedText txt _)
     | null txt = lineWidth 1 . lineColor black
                . moveOriginBy (-1.5, 2)
-               . setBounds mempty
+               . setEnvelope mempty
                . stroke . pathFromTrail
                $ Trail [Linear (0, 18)] False
     | otherwise = highlight black $ drawRec (StyleState $ s . fc white) mt 
   mergeMark _ _ = Just CursorMark
 
-highlight c d = setBounds (getBounds d)
+highlight c d = setEnvelope (getEnvelope d)
               $ d <> boxFit (boundingBox d) (square 1) # fc c
 
 --TODO: These don't quite work the way that they should yet, in the case that
